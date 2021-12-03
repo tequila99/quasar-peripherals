@@ -1,0 +1,28 @@
+// app global css in SCSS form
+@font-face {
+  font-family: Barnaul;
+  src: url(../assets/fonts/BarnaulGrotesk-Reg.woff);
+}
+
+@font-face {
+  font-family: BarnaulMedium;
+  src: url(../assets/fonts/BarnaulGroteskMedium-Reg.woff);
+}
+
+@font-face {
+  font-family: BarnaulBold;
+  src: url(../assets/fonts/BarnaulGroteskBold-Reg.woff);
+}
+
+body {
+  font-family: 'Barnaul', sans-serif;
+}
+
+.medium {
+  font-family: 'BarnaulMedium';
+}
+
+.bold {
+  font-family: 'BarnaulBold'
+}
+
