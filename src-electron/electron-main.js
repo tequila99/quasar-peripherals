@@ -6,7 +6,7 @@ import { devices, btDevices } from './devices'
 const server = Server({
   logger: true, prinRoutes: true, devices, btDevices
 })
-const PORT = 3033
+const PORT = 3030
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform()
@@ -54,7 +54,7 @@ function createWindow () {
 
 app.whenReady().then(() => {
   createWindow()
-  server.listen(PORT, '0.0.0.0', err => {
+  server.listen(PORT, err => {
     if (err) {
       console.log(err)
       server.log.error(err.message)

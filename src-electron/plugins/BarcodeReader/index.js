@@ -1,16 +1,14 @@
 const fp = require('fastify-plugin')
 const SerialPort = require('serialport')
 const InterByteTimeout = require('@serialport/parser-inter-byte-timeout')
-const pnpIDParse = (pnpId, dv, bl) => dv.some(i => pnpId.includes(i.vendor) && pnpId.includes(i.productid)) || bl.fidIndex(el => pnpId.includes(el)) !== -1
-const testPorts = (item, dv, bl) => (item.vendorId && item.productId)
-  ? dv.some(i => i.vendor === item.vendorId.toUpperCase() && i.productid.includes(item.productId.toUpperCase()))
-  : item.pnpId && pnpIDParse(item.pnpId, dv, bl)
+const { testPorts } = require('./helper')
+const decoder = require('./decoder')
 
 module.exports = fp((fastify, opts, done) => {
-  class Reader {
+  class BarcodeReader {
     constructor (opts) {
-      if (Reader.instance) return Reader.instance
-      Reader.instance = this
+      if (BarcodeReader.instance) return BarcodeReader.instance
+      BarcodeReader.instance = this
       this.connected = false
       this.port = null
       this.scanner = null
@@ -19,6 +17,7 @@ module.exports = fp((fastify, opts, done) => {
       this.parser = new InterByteTimeout({ interval: opts.interval || 30 })
       this.devices = opts.devices || []
       this.btDevices = opts.btDevices || []
+      this.socket = null
       return this
     }
 
@@ -27,8 +26,10 @@ module.exports = fp((fastify, opts, done) => {
       this.timerId = setTimeout(this.connect, this.timeout)
     }
 
-    send (message, value) {
-      return true
+    send (messageName, value) {
+      if (!this.socket) return
+      fastify.log.debug(`Отправляем сообщение ${messageName} через сокет с ID ${this.socket.id}`)
+      this.socket.emit(messageName, value)
     }
 
     async connect () {
@@ -60,16 +61,26 @@ module.exports = fp((fastify, opts, done) => {
           this.send('status_barcode_scanner', false)
           this.port = { path: '', manufacturer: '', id: '' }
           this.scanner = null
-          // this.startPolling()
+          this.connected = false
           this.timerId && clearTimeout(this.timerId)
           this.timerId = setTimeout(() => this.connect(), this.timeout)
         })
+        this.parser.on('data', barcode => {
+          const parsedBarcode = decoder(barcode)
+          if (!parsedBarcode) {
+            fastify.log.error('Прочитан неизвестный формат штрих кода')
+            return
+          }
+          const { name, message, data } = parsedBarcode
+          fastify.log.info(message)
+          fastify.log.debug(data)
+          this.send(name, data)
+        })
       } catch (err) {
-        console.log(err)
         fastify.log.error(`Произошла ошибка в процессе поиска сканера штрих-кода ${err.message}`)
       }
     }
   }
-  fastify.decorate('barcodeScanner', new Reader(opts))
+  fastify.decorate('barcodeReader', new BarcodeReader(opts))
   done()
 })
