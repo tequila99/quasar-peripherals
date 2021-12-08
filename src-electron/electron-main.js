@@ -7,7 +7,7 @@ const server = Server({
   logger: true, prinRoutes: true, devices, btDevices
 })
 const PORT = 3030
-
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform()
 

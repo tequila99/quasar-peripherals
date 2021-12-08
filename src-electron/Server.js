@@ -1,8 +1,16 @@
 const Fastify = require('fastify')
+const { fastifySchedulePlugin } = require('fastify-schedule')
+const { SimpleIntervalJob, AsyncTask } = require('toad-scheduler')
 const localize = require('ajv-i18n')
 
 export default options => {
-  const { logger = false, printRoutes = false, devices = [], blDevices = [] } = options
+  const {
+    logger = false,
+    checkTimer = 10,
+    printRoutes = false,
+    devices = [],
+    blDevices = []
+  } = options
   const fastify = Fastify({
     logger,
     ajv: {
@@ -16,10 +24,13 @@ export default options => {
     }
   })
     .register(require('fastify-cors'))
+    .register(fastifySchedulePlugin)
     .register(require('./plugins/BarcodeReader'), {
       devices, blDevices
     })
+    .register(require('./plugins/Connector'))
     .register(require('./plugins/Disposal'))
+    .register(require('./plugins/TasksQueue'))
     .register(require('fastify-socket.io'), {
       cors: {
         methods: 'GET,PUT,POST,OPTIONS',
@@ -29,9 +40,10 @@ export default options => {
       },
       allowEIO3: true
     })
-    .register(require('./services/disposal'), { prefix: '/disposal' })
+    .register(require('./services/disposal'), { prefix: '/api/v1/disposal' })
     .setErrorHandler((error, request, reply) => {
       const { statusCode = 400, message, validation, validationContext } = error
+      console.log(error)
       let response
       if (validation) {
         localize.ru(validation)
@@ -47,24 +59,34 @@ export default options => {
       reply.status(statusCode).send(response)
     })
   fastify.ready(() => {
-    const { log, barcodeReader, io } = fastify
+    const { log, barcodeReader, io, connector, taskQueue } = fastify
     if (printRoutes) log.info(fastify.printRoutes({ commonPrefix: false }))
+    barcodeReader.connector = connector
+    taskQueue.connector = connector
     barcodeReader.connect()
     io.on('connection', socket => {
-      log.info(`Установлено соединение с сокетом с ID: ${socket.id}`)
-      barcodeReader.socket = socket
-      socket.emit('status_barcode_scanner', barcodeReader.connected)
-      socket.on('get_status_barcode_scanner', () => {
-        socket.emit('status_barcode_scanner', barcodeReader.connected)
+      const connect = connector.addConnect(socket)
+      connect.send('status_barcode_scanner', barcodeReader.connected)
+      connect.on('get_status_barcode_scanner', () => {
+        connect.send('status_barcode_scanner', barcodeReader.connected)
       })
-      socket.on('reconnect', () => {
-        socket.emit('status_barcode_scanner', barcodeReader.connected)
-      })
-      socket.on('disconnect', reason => {
-        barcodeReader.socket = null
-        log.info(`Соединение с сокетом с ID: ${socket.id} разорвано по причине: ${reason}`)
+      connect.on('reconnect', () => {
+        connect.emit('status_barcode_scanner', barcodeReader.connected)
       })
     })
+    const task = new AsyncTask(
+      'Проверка очереди заданий на проверку статуса вывода из оборота',
+      () => {
+        fastify.log.debug(`Выполняется запуск задания каждые ${checkTimer} секунд`)
+        return fastify.taskQueue.check()
+      },
+      err => {
+        fastify.log.error(err.message)
+      }
+    )
+    const job = new SimpleIntervalJob({ seconds: checkTimer }, task)
+
+    fastify.scheduler.addSimpleIntervalJob(job)
   })
   return fastify
 }

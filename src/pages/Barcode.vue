@@ -5,7 +5,7 @@
 
 <script>
 export default {
-  name: '',
+  name: 'Barcode',
   props: {},
   data () {
     return {
