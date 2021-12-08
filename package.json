@@ -10,26 +10,26 @@
     "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {
-    "@quasar/cli": "^1.2.2",
     "@quasar/extras": "^1.0.0",
     "@serialport/parser-inter-byte-timeout": "^9.2.4",
     "ajv-i18n": "^4.2.0",
-    "axios": "^0.24.0",
     "core-js": "^3.6.5",
     "date-fns": "^2.27.0",
     "fastify": "^3.24.1",
     "fastify-cors": "^6.0.2",
     "fastify-plugin": "^3.0.0",
+    "fastify-schedule": "^1.0.0",
     "fastify-socket.io": "^3.0.0",
-    "fastify-websocket": "^4.0.0",
     "quasar": "^2.0.0",
     "serialport": "^9.2.8",
-    "socket.io": "^4.4.0"
+    "socket.io": "^4.4.0",
+    "toad-scheduler": "^1.6.0",
+    "undici": "^4.11.0",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.13.14",
     "@quasar/app": "^3.0.0",
-    "@serialport/list": "^9.2.8",
     "electron": "^16.0.4",
     "electron-rebuild": "^3.2.5",
     "eslint": "^7.14.0",
