@@ -23,6 +23,7 @@
     "quasar": "^2.0.0",
     "serialport": "^9.2.8",
     "socket.io": "^4.4.0",
+    "tcp-port-used": "^1.0.2",
     "toad-scheduler": "^1.6.0",
     "undici": "^4.11.0",
     "uuid": "^8.3.2"
