@@ -1,5 +1,5 @@
 function pnpIDParse (pnpId, dv, bl) {
-  return dv.some(i => pnpId.includes(i.vendor) && pnpId.includes(i.productid)) || bl.fidIndex(el => pnpId.includes(el)) !== -1
+  return dv.some(i => pnpId.includes(i.vendor) && pnpId.includes(i.productid)) || bl.findIndex(el => pnpId.includes(el)) !== -1
 }
 
 function bufferToBinaryString (buf) {
