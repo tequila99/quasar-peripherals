@@ -48,14 +48,14 @@ function createWindow () {
     mainWindow = null
   })
 
-  /* mainWindow.on('close', (event) => {
+  mainWindow.on('close', (event) => {
     if (useTrayIcon) {
       event.preventDefault()
       mainWindow.hide()
     }
-  }) */
+  })
 
-  mainWindow.on('minimize', () => {
+  mainWindow.on('minimize', (event) => {
     if (useTrayIcon) {
       event.preventDefault()
       mainWindow.hide()
