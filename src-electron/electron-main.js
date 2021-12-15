@@ -5,9 +5,30 @@ import Server from './Server'
 import { devices, btDevices } from './devices'
 import tcpPortUsed from 'tcp-port-used'
 // import { getUserConfig } from './config'
+import electronLog from 'electron-log'
+
+// class Logger {
+//   constructor () {
+//     this.log = function (msg) { electronLog.log('log:', msg) }
+//     this.info = function (msg) { electronLog.info('info:', msg) }
+//   }
+// }
+
+function Logger (...args) {
+  this.args = args
+}
+
+Logger.prototype.log = function (msg) { electronLog.log('log:', msg) }
+Logger.prototype.info = function (msg) { electronLog.info('info:', msg) }
+Logger.prototype.error = function (msg) { electronLog.error('error:', msg) }
+Logger.prototype.debug = function (msg) { electronLog.debug('debug:', msg) }
+Logger.prototype.fatal = function (msg) { electronLog.error('fatal:', msg) }
+Logger.prototype.warn = function (msg) { electronLog.warn('warn:', msg) }
+Logger.prototype.trace = function (msg) { electronLog.log('trace:', msg) }
+Logger.prototype.child = function () { return new Logger() }
 
 const server = Server({
-  logger: true, prinRoutes: true, devices, btDevices
+  logger: new Logger(), prinRoutes: true, devices, btDevices
 })
 const PORT = 3030
 
