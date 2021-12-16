@@ -195,7 +195,7 @@ module.exports = configure(function (ctx) {
 
     // Full list of options: https://quasar.dev/quasar-cli/developing-electron-apps/configuring-electron
     electron: {
-      bundler: 'packager', // 'packager' or 'builder'
+      bundler: 'builder', // 'packager' or 'builder'
 
       packager: {
         // https://github.com/electron-userland/electron-packager/blob/master/docs/api.md#options
@@ -213,7 +213,41 @@ module.exports = configure(function (ctx) {
       builder: {
         // https://www.electron.build/configuration/configuration
 
-        appId: 'disposal-ui'
+        appId: 'disposal-ui',
+        productName: 'Квазар.Периферия',
+        win: {
+          target: [
+            'nsis'
+          ],
+          requestedExecutionLevel: 'asInvoker',
+          artifactName: '${productName} setup v${version}.${ext}'
+        },
+        linux: {
+          target: [
+            'deb',
+            'rpm',
+            'snap'
+          ],
+          category: 'Utility'
+        },
+        nsis: {
+          include: 'build-settings/installer.nsh',
+          uninstallDisplayName: 'Квазар.Периферия',
+          oneClick: false,
+          allowToChangeInstallationDirectory: true
+        },
+        directories: {
+          buildResources: 'resources'
+        },
+        extraFiles: [
+          {
+            from: 'resources',
+            to: 'resources',
+            filter: [
+              '**/*'
+            ]
+          }
+        ]
       },
 
       // "chain" is a webpack-chain object https://github.com/neutrinojs/webpack-chain
