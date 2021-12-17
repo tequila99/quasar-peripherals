@@ -67,7 +67,7 @@ export default options => {
     io.on('connection', socket => {
       const connect = connector.addConnect(socket)
       connect.send('status_barcode_scanner', barcodeReader.connected)
-      connect.on('get_status_barcode_scanner', () => {
+      connect.connect.on('get_status_barcode_scanner', () => {
         connect.send('status_barcode_scanner', barcodeReader.connected)
       })
       connect.on('reconnect', () => {
