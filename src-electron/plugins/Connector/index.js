@@ -1,4 +1,5 @@
 const fp = require('fastify-plugin')
+const { Writable } = require('stream')
 
 module.exports = fp((fastify, opts, done) => {
   class Connect {
@@ -16,12 +17,24 @@ module.exports = fp((fastify, opts, done) => {
     }
   }
 
-  class Connector {
+  class Connector extends Writable {
     constructor () {
+      super({ objectMode: true })
       if (Connector.instance) return Connector.instance
       Connector.instance = this
       this.connectors = []
       this.log = opts.logger || console
+    }
+
+    _write ({ name, message, data }, encoding, done) {
+      try {
+        this.log.info(message)
+        this.log.debug(data)
+        if (this.connectors.length) this.send(name, data)
+        done()
+      } catch (e) {
+        done(e)
+      }
     }
 
     addConnect (socket) {

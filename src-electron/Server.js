@@ -43,7 +43,7 @@ export default options => {
     .register(require('./services/disposal'), { prefix: '/api/v1/disposal' })
     .setErrorHandler((error, request, reply) => {
       const { statusCode = 400, message, validation, validationContext } = error
-      console.log(error)
+      fastify.log.error(error)
       let response
       if (validation) {
         localize.ru(validation)

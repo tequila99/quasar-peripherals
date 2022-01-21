@@ -46,8 +46,14 @@ const DECODERS = [
 module.exports = new Transform({
   objectMode: true,
   transform (chunk, encoding, done) {
-    const decoder = DECODERS.find(el => el.test(chunk))
-    if (!decoder) throw new Error('Неизвестный формат штрих-кода')
-    done(null, { name: decoder.name, message: decoder.message, data: decoder.transform(chunk) })
+    try {
+      const decoder = DECODERS.find(el => el.test(chunk))
+      if (!decoder) throw new Error('Неизвестный формат штрих-кода')
+      const { name, message, transform } = decoder
+      const data = transform(chunk)
+      done(null, { name, message, data })
+    } catch (e) {
+      done(e)
+    }
   }
 })
