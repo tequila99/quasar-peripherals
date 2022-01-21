@@ -6,6 +6,7 @@
   "author": "Ivan Milovanov <tequila00@yandex.ru>",
   "private": true,
   "scripts": {
+    "start:dev": "quasar dev -m electron",
     "lint": "eslint --ext .js,.vue ./",
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev -m electron",

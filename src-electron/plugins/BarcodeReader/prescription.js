@@ -124,9 +124,9 @@ const BARCODE_CONTENT = [
   }
 ]
 
-const stringFromBinaryString = str => String.fromCodePoint(...str.split(/([0-1]{8})/).filter(el => el).map(el => parseInt(el, 2)).filter(el => el)).trim()
+const stringFromBinaryString = str => String.fromCodePoint(...str.split(/([0-1]{8})/).filter(Boolean).map(el => parseInt(el, 2)).filter(Boolean)).trim()
 
-const formatPerson = personId => personId.toString().length === 11 ? personId.toString() : `0${personId.toString()}`
+const formatPerson = personId => personId.toString().padStart(11, '0')
 
 const dateFromNumber = ({ year, month, day, person_id: personId, ...params }) => (
   {
@@ -140,21 +140,15 @@ const dateFromNumber = ({ year, month, day, person_id: personId, ...params }) =>
 )
 
 const parseBinaryString = data => BARCODE_CONTENT.reduce((acc, el) => {
-  if (el.type === 'Number') {
-    acc[0] = { ...acc[0], [el.name]: parseInt(data.substr(acc[1], el.length), 2) }
-  } else if (el.type === 'String') {
-    acc[0] = { ...acc[0], [el.name]: stringFromBinaryString(data.substr(acc[1], el.length)) }
-  }
+  const str = data.substr(acc[1], el.length)
+  let value = null
+  if (el.type === 'Number') value = parseInt(str, 2)
+  if (el.type === 'String') value = stringFromBinaryString(str)
+  acc[0] = { ...acc[0], [el.name]: value }
   acc[1] += el.length
   return acc
 }, [{}, 0])[0]
 
-const parseString = data => Buffer.isBuffer(data) ? dateFromNumber(parseBinaryString(bufferToBinaryString(data))) : null
+const parseString = data => dateFromNumber(parseBinaryString(bufferToBinaryString(data)))
 
-module.exports = data => {
-  if (typeof data === 'string') {
-    return parseString(Buffer.from(data, 'base64'))
-  } else {
-    return parseString(data)
-  }
-}
+module.exports = data => parseString(Buffer.from(data.toString().trim(), 'base64'))

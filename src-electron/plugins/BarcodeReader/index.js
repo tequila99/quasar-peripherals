@@ -1,13 +1,13 @@
 const fp = require('fastify-plugin')
 const SerialPort = require('serialport')
 const InterByteTimeout = require('@serialport/parser-inter-byte-timeout')
+const { pipeline } = require('stream')
 const { testPorts } = require('./helper')
-const decoder = require('./decoder')
+const decoderStream = require('./decoder')
 
 module.exports = fp((fastify, opts, done) => {
-  const { log } = fastify
   class BarcodeReader {
-    constructor (opts, log = console) {
+    constructor (opts) {
       if (BarcodeReader.instance) return BarcodeReader.instance
       BarcodeReader.instance = this
       this.connected = false
@@ -19,11 +19,11 @@ module.exports = fp((fastify, opts, done) => {
       this.devices = opts.devices || []
       this.btDevices = opts.btDevices || []
       this.connector = null
-      this.log = log
+      this.log = opts.logger || console
     }
 
     startPolling () {
-      this.timerId && clearTimeout(this.timerId)
+      if (this.timerId) clearTimeout(this.timerId)
       this.timerId = setTimeout(this.connect, this.timeout)
     }
 
@@ -32,46 +32,48 @@ module.exports = fp((fastify, opts, done) => {
       this.connector.send(messageName, value)
     }
 
+    async searchPort () {
+      const avaliblePorts = await SerialPort.list()
+      const scannerPort = avaliblePorts.find(el => testPorts(el, this.devices, this.btDevices))
+      if (!scannerPort) return null
+      const { manufacturer = '', pnpId: id = '', path = '' } = scannerPort
+      return { path, manufacturer, id }
+    }
+
+    initPort () {
+      this.scanner = new SerialPort(this.port.path)
+      this.scanner.on('open', () => {
+        if (this.timerId) clearTimeout(this.timerId)
+        this.log.info(`Найден и подключен сканер штрих кода (порт ${this.port.path})`)
+        this.connected = true
+        this.scanner.flush(err => {
+          if (err) this.log.error(`Ошибка при попытке сбросить сканер штрих кода (порт ${this.port.path}), ${err.message}`)
+        })
+        this.send('status_barcode_scanner', true)
+      })
+      this.scanner.on('error', err => this.log.error(`Ошибка сканера штрих кода (порт ${this.port.path}), ${err.message}`))
+      this.scanner.on('close', () => {
+        this.log.info(`Сканер штрих кода (порт ${this.port.path}) отключен`)
+        this.port = null
+        this.scanner = null
+        this.connected = false
+        this.send('status_barcode_scanner', false)
+        this.startPolling()
+      })
+    }
+
     async connect () {
       try {
         if (this.connected) return
-        const avaliblePorts = await SerialPort.list()
-        const scannerPort = avaliblePorts.find(el => testPorts(el, this.devices, this.btDevices))
-        if (!scannerPort) {
-          this.timerId && clearTimeout(this.timerId)
-          this.timerId = setTimeout(() => this.connect(), this.timeout)
-          return
-        }
-        const { manufacturer = '', pnpId: id = '', path = '' } = scannerPort
-        this.port = { path, manufacturer, id }
-        this.scanner = new SerialPort(path)
-        this.scanner.pipe(this.parser)
-        this.scanner.on('open', () => {
-          this.timerId && clearTimeout(this.timerId)
-          this.log.info(`Найден и подключен сканер штрих кода (порт ${this.port.path})`)
-          this.connected = true
-          this.scanner.flush(err => {
-            if (err) this.log.error(`Ошибка при попытке сбросить сканер штрих кода (порт ${this.port.path}), ${err.message}`)
-          })
-          this.send('status_barcode_scanner', true)
-        })
-        this.scanner.on('error', err => fastify.log.error(`Ошибка сканера штрих кода (порт ${this.port.path}), ${err.message}`))
-        this.scanner.on('close', () => {
-          this.log.info(`Сканер штрих кода (порт ${this.port.path}) отключен`)
-          this.send('status_barcode_scanner', false)
-          this.port = { path: '', manufacturer: '', id: '' }
-          this.scanner = null
-          this.connected = false
-          this.timerId && clearTimeout(this.timerId)
-          this.timerId = setTimeout(() => this.connect(), this.timeout)
-        })
-        this.parser.on('data', barcode => {
-          const parsedBarcode = decoder(barcode)
-          if (!parsedBarcode) {
-            this.log.error('Прочитан неизвестный формат штрих кода')
-            return
-          }
-          const { name, message, data } = parsedBarcode
+        this.port = await this.searchPort()
+        if (!this.port) return this.startPolling()
+        this.initPort()
+        pipeline(
+          this.scanner,
+          this.parser,
+          decoderStream,
+          err => this.log.error(`Ошибка при обработке данных сканера штрих кода (порт ${this.port.path}), ${err.message}`)
+        ).on('data', ({ name, message, data }) => {
           this.log.info(message)
           this.log.debug(data)
           this.send(name, data)
@@ -81,6 +83,6 @@ module.exports = fp((fastify, opts, done) => {
       }
     }
   }
-  fastify.decorate('barcodeReader', new BarcodeReader(opts, log))
+  fastify.decorate('barcodeReader', new BarcodeReader(opts))
   done()
 })

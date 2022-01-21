@@ -1,4 +1,5 @@
 /* eslint-disable no-control-regex */
+const { Transform } = require('stream')
 const transformOmc = require('./omc')
 const transformMdlp = require('./mdlp')
 const transformPrescription = require('./prescription')
@@ -42,8 +43,11 @@ const DECODERS = [
   }
 ]
 
-module.exports = barcode => {
-  const dt = DECODERS.find(el => el.test(barcode))
-  if (!dt) return null
-  return { name: dt.name, message: dt.message, data: dt.transform(barcode) }
-}
+module.exports = new Transform({
+  objectMode: true,
+  transform (chunk, encoding, done) {
+    const decoder = DECODERS.find(el => el.test(chunk))
+    if (!decoder) throw new Error('Неизвестный формат штрих-кода')
+    done(null, { name: decoder.name, message: decoder.message, data: decoder.transform(chunk) })
+  }
+})

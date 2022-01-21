@@ -5,8 +5,7 @@ const { v4 } = require('uuid')
 
 module.exports = fp((fastify, opts, done) => {
   class Disposal {
-    constructor ({ ip, port, username, password, ...args }, log = console) {
-      console.log(ip)
+    constructor ({ ip, port, username, password, ...args }, logger = opts.logger) {
       this.ip = ip
       this.port = port
       this.username = username
@@ -23,7 +22,7 @@ module.exports = fp((fastify, opts, done) => {
       this.numberDocument = numberDocument
       this.seriesDocument = seriesDocument
       this.rowMarks = marks
-      this.log = log
+      this.log = logger || console
     }
 
     get token () {
