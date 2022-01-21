@@ -1,8 +1,6 @@
 const fp = require('fastify-plugin')
 
 module.exports = fp((fastify, opts, done) => {
-  const { log } = fastify
-
   class Connect {
     constructor (connect) {
       this.connect = connect
@@ -19,11 +17,11 @@ module.exports = fp((fastify, opts, done) => {
   }
 
   class Connector {
-    constructor (log = console) {
+    constructor () {
       if (Connector.instance) return Connector.instance
       Connector.instance = this
       this.connectors = []
-      this.log = log
+      this.log = opts.logger || console
     }
 
     addConnect (socket) {
@@ -31,15 +29,15 @@ module.exports = fp((fastify, opts, done) => {
       this.log.info(`Установлено соединение с ID: ${socket.id}`)
       const connect = new Connect(socket)
       this.connectors.push(connect)
-      connect.on('disconnect', reason => {
-        this.removeConnector(connect)
+      socket.on('disconnect', reason => {
+        this.removeConnect(connect)
         this.log.info(`Соединение с ID: ${connect.id} разорвано по причине: ${reason}`)
       })
       return connect
     }
 
-    removeConnect (socket) {
-      const index = this.connectors.findIndex(el => el.id === socket.id)
+    removeConnect (connect) {
+      const index = this.connectors.findIndex(el => el.id === connect.id)
       if (index !== -1) this.connectors.splice(index, 1)
     }
 
@@ -51,6 +49,6 @@ module.exports = fp((fastify, opts, done) => {
     }
   }
 
-  fastify.decorate('connector', new Connector(log))
+  fastify.decorate('connector', new Connector(opts))
   done()
 })

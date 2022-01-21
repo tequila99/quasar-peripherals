@@ -26,7 +26,7 @@ export default options => {
     .register(require('fastify-cors'))
     .register(fastifySchedulePlugin)
     .register(require('./plugins/BarcodeReader'), {
-      devices, blDevices
+      devices, blDevices, logger
     })
     .register(require('./plugins/Connector'))
     .register(require('./plugins/Disposal'))

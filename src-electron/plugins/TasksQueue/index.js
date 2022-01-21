@@ -6,7 +6,7 @@ module.exports = fp((fastify, opts, done) => {
   class Task {
     constructor ({ rvRequestId, ...args }) {
       this.id = rvRequestId
-      this.disposal = new Disposal({ ...args })
+      this.disposal = new Disposal({ ...args }, opts.logger)
       this.status = null
       this.result = null
       this.error = null
@@ -35,12 +35,12 @@ module.exports = fp((fastify, opts, done) => {
   }
 
   class TasksQueue {
-    constructor (log = console) {
+    constructor (opts) {
       if (TasksQueue.instance) return TasksQueue.instance
       TasksQueue.instance = this
       this.queue = []
       this.connector = null
-      this.log = log
+      this.log = opts.logger || console
     }
 
     add ({ rvRequestId, ...args }) {
@@ -69,6 +69,6 @@ module.exports = fp((fastify, opts, done) => {
       }
     }
   }
-  fastify.decorate('taskQueue', new TasksQueue(log))
+  fastify.decorate('taskQueue', new TasksQueue(opts))
   done()
 })
